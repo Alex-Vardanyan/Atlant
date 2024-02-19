@@ -27,15 +27,15 @@ struct Cartridge {
     {
         HORIZONTAL,
         VERTICAL,
-        ONESCREEN_LO,
-        ONESCREEN_HI,
+        ONE_SCREEN_LO,
+        ONE_SCREEN_HI,
     } mirror = HORIZONTAL;
 
     uint8_t PRG_Banks = 0;
     uint8_t CHR_Banks = 0;
     uint8_t mapperId = 0;
 
-    u8 load(u16 address, bool FromCPU = false);
+    u8& load(u16 address, bool FromCPU = false);
     void store(u16 address, u8 value, bool FromCPU = false);
 
     explicit Cartridge(const std::string& fileName);

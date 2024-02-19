@@ -1,4 +1,3 @@
-#include <iostream>
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/Graphics/Font.hpp>
@@ -16,7 +15,7 @@ std::string hex(uint32_t n, uint8_t d)
     for (int i = d - 1; i >= 0; i--, n >>= 4)
         s[i] = "0123456789ABCDEF"[n & 0xF];
     return s;
-};
+}
 
 void drawCpuStatus(sf::RenderWindow& window, CPU& cpu, sf::Font& font, float x = 10, float y = 20){
     sf::Text cpuStatus[14];
@@ -103,8 +102,11 @@ int main() {
     PPU ppu;
     Interconnect interconnect(ppu);
 
+    bool emulationRun = false;
+    float residualTime = 0.0f;
+
     sf::RenderWindow window;
-    const int scale = 3;
+    const int scale = 1;
     window.create(sf::VideoMode(256*scale, 240*scale), "Atlant", sf::Style::Default);
     window.setVerticalSyncEnabled(true);
     window.setFramerateLimit(60);
@@ -112,59 +114,60 @@ int main() {
 
     sf::Font font;
     font.loadFromFile("/Users/alex/CLionProjects/Atlant/PixeloidSans.ttf");
-    sf::Text text;
-    text.setFont(font);
-    text.setFillColor(sf::Color::White);
-    text.setCharacterSize(25);
-    text.setString("Something");
 
-    //populate ram with some instructions
-    std::string code;
-    code = "A2 0A 8E 00 00 A2 03 8E 01 00 AC 00 00 A9 00 18 6D 01 00 88 D0 FA 8D 02 00 EA EA EA";
-    uint16_t offset = 0x8000;
-    int i = 0;
-    while (code[i] != '\0')
-    {
-        std::string hexCode = code.substr(i,2);
-        interconnect.store(offset++, (uint8_t)std::stoul(hexCode, nullptr, 16));
-        i += 3;
-    }
+    auto* cartridge = new Cartridge("/Users/alex/CLionProjects/Atlant/nestest.nes");
+    interconnect.newCartridge(cartridge);
 
-    //populate reset vector
-    interconnect.store(0xFFFC, 0x00);
-    interconnect.store(0xFFFD, 0x80);
     CPU cpu(interconnect);
     cpu.reset();
-    interconnect.reset();
-    cpu.pc = 0x8000;
+    sf::Clock clock;
 
     //todo:Update
     while(window.isOpen()){
-        window.clear(sf::Color::Blue);
+        window.clear(sf::Color::Black);
 
         sf::Event event;
         while (window.pollEvent(event)){
             if (event.type == sf::Event::Closed){
                 window.close();
             }
-            if (event.type == sf::Event::KeyPressed) //todo a simple workaround
-            {
-                if (event.key.scancode == sf::Keyboard::Scancode::Space)
-                    do{
+            sf::Time elapsed = clock.restart();
+            if (emulationRun){
+                if (sf::seconds(residualTime) <= sf::seconds(1.0f/60.0f)){
+                    residualTime += elapsed.asSeconds();
+                }
+                else{
+                    do {
                         cpu.decode_and_execute();
-                    } while (cpu.cycles != 0);
-                if (event.key.scancode == sf::Keyboard::Scancode::R)
-                    cpu.reset();
-
-                if (event.key.scancode == sf::Keyboard::Scancode::I)
-                    cpu.irq();
-
-                if (event.key.scancode == sf::Keyboard::Scancode::N)
-                    cpu.nmi();
+                    } while (!cpu.interconnect.ppu.frameComplete);
+                    cpu.interconnect.ppu.frameComplete = false;
+                }
             }
+            else
+                if (event.type == sf::Event::KeyPressed) //todo: this is a simple workaround
+                {
+                    if (event.key.scancode == sf::Keyboard::Scancode::C)
+                    {
+                        do{
+                            cpu.decode_and_execute();
+                        } while (cpu.cycles > 0);
+                    }
+                    if (event.key.scancode == sf::Keyboard::Scancode::F){
+                        do{
+                            cpu.decode_and_execute();
+                        } while (!cpu.interconnect.ppu.frameComplete);
+                        cpu.interconnect.ppu.frameComplete = false;
+                    }
+                    if (event.key.scancode == sf::Keyboard::Scancode::Space){
+                        emulationRun = !emulationRun;
+                    }
+                    if (event.key.scancode == sf::Keyboard::Scancode::R){
+                        cpu.reset();
+                    }
+                }
         }
 
-//        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) //todo is firing to many times
+//        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) //todo is firing to many times | replace with bool pointer
 //        {
 //            do{
 //                cpu.decode_and_execute();
@@ -181,11 +184,13 @@ int main() {
 //            cpu.nmi();
 
 
-        drawCpuStatus(window, cpu, font);
-        drawRam(window, interconnect, cpu.pc-16*4, font);
+//        drawCpuStatus(window, cpu, font);
+        window.draw(cpu.interconnect.ppu.getScreen());
+//        drawRam(window, interconnect, cpu.pc-16*4, font);
 //        drawCode(window, interconnect, font);
 
         window.display();
     }
+    delete cartridge;
     return  0;
 }

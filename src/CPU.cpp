@@ -36,7 +36,7 @@ u8 CPU::zero_page(){ //$0000 - $00FF
 }
 
 u8 CPU::indexed_zero_page_x(){
-    std::cout<<"zero_page_x"<<std::endl;
+    std::cout<<"indexed_zero_page_x"<<std::endl;
     u8 address = (s8)(interconnect.load(++pc) + x); //wrap around 0x0100 => 0x00
     fetched_byte = interconnect.load((u16)address, false);
     pc++;
@@ -44,7 +44,7 @@ u8 CPU::indexed_zero_page_x(){
 }
 
 u8 CPU::indexed_zero_page_y(){
-    std::cout<<"zero_page_y"<<std::endl;
+    std::cout<<"indexed_zero_page_y"<<std::endl;
     u8 address = (s8)(interconnect.load(++pc) + y); //wrap around 0x0100 => 0x00
     fetched_byte = interconnect.load((u16)address, false);
     pc++;
@@ -61,7 +61,7 @@ u8 CPU::absolute(){ //address formed by the values of at pc+1 and pc
 }
 
 u8 CPU::indexed_absolute_x(){
-    std::cout<<"absolute_x"<<std::endl;
+    std::cout<<"indexed_absolute_x"<<std::endl;
     u16 address = (u16)interconnect.load(pc + 2);
     int page_change = ((pc & 0xFF00) != address << 8) ? 1 : 0;
     address = address << 8 | interconnect.load(pc + 1);
@@ -72,7 +72,7 @@ u8 CPU::indexed_absolute_x(){
 }
 
 u8 CPU::indexed_absolute_y(){
-    std::cout<<"absolute_y"<<std::endl;
+    std::cout<<"indexed_absolute_y"<<std::endl;
     u16 address = (u16)interconnect.load(pc + 2);
     int page_change = ((pc & 0xFF00) != address << 8) ? 1 : 0;
     address = address << 8 | interconnect.load(pc + 1);
@@ -559,22 +559,23 @@ u8 CPU::XXX(){ //illegal instruction/opcode
 }
 
 void CPU::decode_and_execute(){
-//    interconnect.clock();
-//    if (PPUclockCount == 2) {
-//        PPUclockCount = 0;
+    interconnect.clock();
+    if (PPUclockCount == 3) {
+        PPUclockCount = 0;
         if (cycles == 0){
             setFlag(flags::u, true);
-            std::cout<<std::hex<<pc<<std::endl;
+            std::cout<<std::hex<<pc<<": "; //debugging
             opcode = interconnect.load(pc);
             Instruction instruction = decode_table[opcode]; //faster way with lesser code instead of using switch and 124(?)/256 cases
-            std::cout<<instruction.name<<std::endl;
+            std::cout<<instruction.name<<" -  "; //debugging
             int additional_cycle_mode = (this->*instruction.addressing_mode)(); //pc increments here
             int additional_cycle_op = (this->*instruction.operation)();
 
             cycles += instruction.cycles + (additional_cycle_mode & additional_cycle_op);
         }
         cycles--;
-//    }
+    }
+    PPUclockCount++;
 }
 
 void CPU::reset(){
@@ -590,6 +591,7 @@ void CPU::reset(){
     sp = 0x00; //offset from 0x0200
     fetched_byte = 0x00;
     cycles = 8;
+    interconnect.reset();
 }
 
 void CPU::setFlag(flags flag, bool value){
@@ -620,7 +622,6 @@ void CPU::irq() {
         nmi();
         cycles++;
     }
-
 }
 
 CPU::~CPU() = default;

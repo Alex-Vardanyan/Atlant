@@ -84,13 +84,11 @@ Cartridge::Cartridge(const std::string &fileName) {
 
 }
 
-u8 Cartridge::load(u16 address, bool fromCPU) {
-    u8 value = 0x00;
+u8& Cartridge::load(u16 address, bool fromCPU) {
     if (fromCPU)
-        value = PRG_ROM[mapper->cpuLoad(address)];
+        return PRG_ROM[mapper->cpuLoad(address)];
     else
-        value = CHR_ROM[mapper->ppuLoad(address)];
-    return value;
+        return CHR_ROM[mapper->ppuLoad(address)];
 }
 
 void Cartridge::store(u16 address, u8 value, bool FromCPU) {
