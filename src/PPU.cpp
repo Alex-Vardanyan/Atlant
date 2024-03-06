@@ -64,7 +64,7 @@ sf::Sprite &PPU::getPatternTable(u8 i) {
 PPU::PPU() {
     for (int i = 0; i < 5; ++i) {
         int width = i < 3 ? 256 : 128;
-        int height = i < 3 ? 140 : 128;
+        int height = i < 3 ? 240 : 128;
         pixels[i] = new sf::Uint8 [width * height * 4];
         textures[i].create(width, height);
     }

@@ -241,6 +241,7 @@ u8 CPU::BPL(){ //branch on positive
         if((new_pc & 0xFF00) != (pc & 0xFF00))
             cycles++; //page is crossed
         pc = new_pc;
+        pc = 0xc009; //testing
     }
     return 0;
 }

@@ -108,8 +108,8 @@ int main() {
     sf::RenderWindow window;
     const int scale = 1;
     window.create(sf::VideoMode(256*scale, 240*scale), "Atlant", sf::Style::Default);
-    window.setVerticalSyncEnabled(true);
-    window.setFramerateLimit(60);
+//    window.setVerticalSyncEnabled(true);
+//    window.setFramerateLimit(60);
     window.setKeyRepeatEnabled(false);
 
     sf::Font font;
@@ -133,15 +133,19 @@ int main() {
             }
             sf::Time elapsed = clock.restart();
             if (emulationRun){
-                if (sf::seconds(residualTime) <= sf::seconds(1.0f/60.0f)){
-                    residualTime += elapsed.asSeconds();
-                }
-                else{
+//                if (sf::seconds(residualTime) <= sf::seconds(1.0f/60.0f)){
+//                    residualTime += elapsed.asSeconds();
+//                }
+//                else{
                     do {
-                        cpu.decode_and_execute();
+//                        cpu.decode_and_execute();
+                        sf::Thread thread(&CPU::decode_and_execute, &cpu);
+                        thread.launch();
+                        window.draw(cpu.interconnect.ppu.getScreen());
+                        window.display();
                     } while (!cpu.interconnect.ppu.frameComplete);
                     cpu.interconnect.ppu.frameComplete = false;
-                }
+//                }
             }
             else
                 if (event.type == sf::Event::KeyPressed) //todo: this is a simple workaround
@@ -149,12 +153,18 @@ int main() {
                     if (event.key.scancode == sf::Keyboard::Scancode::C)
                     {
                         do{
-                            cpu.decode_and_execute();
+                            sf::Thread thread(&CPU::decode_and_execute, &cpu);
+                            thread.launch();
+                            window.draw(cpu.interconnect.ppu.getScreen());
+                            window.display();
                         } while (cpu.cycles > 0);
                     }
                     if (event.key.scancode == sf::Keyboard::Scancode::F){
                         do{
-                            cpu.decode_and_execute();
+                            sf::Thread thread(&CPU::decode_and_execute, &cpu);
+                            thread.launch();
+                            window.draw(cpu.interconnect.ppu.getScreen());
+                            window.display();
                         } while (!cpu.interconnect.ppu.frameComplete);
                         cpu.interconnect.ppu.frameComplete = false;
                     }
